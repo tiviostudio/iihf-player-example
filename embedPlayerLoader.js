@@ -1,20 +1,13 @@
-async function loadEmbedPlayerUrl() {
-
-    const scripts = document.getElementsByTagName('script');
-    const index = scripts.length - 1;
-    const myScript = scripts[index];
-
+async function renderPlayer(playerElement) {
     const params = {
-        channelName: myScript.getAttribute('channelName'),
-        startTime: new Date(myScript.getAttribute('startTime')),
-        endTime: new Date(myScript.getAttribute('endTime')),
-        nameLeft: myScript.getAttribute('nameLeft'),
-        nameRight: myScript.getAttribute('nameRight'),
-        backgroundImage: myScript.getAttribute('backgroundImage'),
-        leftFlagImage: myScript.getAttribute('leftFlagImage'),
-        rightFlagImage: myScript.getAttribute('rightFlagImage'),
-        scoreLeft: myScript.getAttribute('scoreLeft'),
-        scoreRight: myScript.getAttribute('scoreRight'),
+        channelName: playerElement.getAttribute('channelName'),
+        startTime: new Date(playerElement.getAttribute('startTime')),
+        endTime: new Date(playerElement.getAttribute('endTime')),
+        nameLeft: playerElement.getAttribute('nameLeft'),
+        nameRight: playerElement.getAttribute('nameRight'),
+        backgroundImage: playerElement.getAttribute('backgroundImage'),
+        leftFlagImage: playerElement.getAttribute('leftFlagImage'),
+        rightFlagImage: playerElement.getAttribute('rightFlagImage'),
     }
 
     console.log('params', params)
@@ -42,15 +35,24 @@ async function loadEmbedPlayerUrl() {
 
         // Create a new iframe element and set its src to the embedPlayerUrl with parameters
         let iframe = document.createElement('iframe');
-        iframe.id = 'tivio-iihf-iframe';
         iframe.title = 'Tivio IIHF Player iframe';
         iframe.width = '100%';
         iframe.style.aspectRatio = '16/9';
+        iframe.style.overflow = 'hidden'
         iframe.allow = 'fullscreen';
         iframe.src = embedPlayerUrl; // Set the src with query parameters
 
         // Append the iframe to the div
-        document.getElementById('tivio-iihf-iframe-wrapper').appendChild(iframe);
+        playerElement.appendChild(iframe);
+    }
+}
+
+async function loadEmbedPlayerUrl() {
+
+    const players = document.getElementsByClassName('tivio-iihf-player')
+
+    for (const playerElement of players) {
+        renderPlayer(playerElement)
     }
 }
 

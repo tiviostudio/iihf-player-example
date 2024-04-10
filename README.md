@@ -1,11 +1,20 @@
 # Tivio IIHF Embedded Player
 ## Integration
 1. Paste the provided javascript file to your CMS.
-2. Create new div with id “tivio-iihf-iframe-wrapper” where the player should be located e.g.
+2. Create new div with the parameters to match the event you want to play e.g.
 
 ```html
-<div id="tivio-iihf-iframe-wrapper">
-   <!-- The iframe will be appended here by the script -->
+<div
+    class="tivio-iihf-player"
+    channelName="7tl6We5FhLyCfZcmSG6F"
+    startTime="2024-04-10T10:36:30"
+    endTime="2024-04-10T10:40:30"
+    nameLeft="Slovensko"
+    nameRight="USA"
+    backgroundImage="https://www.insportline.cz/upload/image/category/Ledni-hokej.png"
+    leftFlagImage="https://flagdownload.com/wp-content/uploads/Flag_of_Slovakia_Flat_Square-128x128.png"
+    rightFlagImage="https://flagdownload.com/wp-content/uploads/Flag_of_United_States_Flat_Square-128x128.png">
+    <!-- The iframe will be appended here by the script -->
 </div>
 ```
 
@@ -13,18 +22,8 @@
 
 ```html
 <script
-    channelName="7tl6We5FhLyCfZcmSG6F"
-    startTime="2024-04-10T10:30:00"
-    endTime="2024-04-10T12:30:00"
-    nameLeft="Slovensko"
-    nameRight="USA"
-    backgroundImage="https://www.insportline.cz/upload/image/category/Ledni-hokej.png"
-    leftFlagImage="https://flagdownload.com/wp-content/uploads/Flag_of_Slovakia_Flat_Square-128x128.png"
-    rightFlagImage="https://flagdownload.com/wp-content/uploads/Flag_of_United_States_Flat_Square-128x128.png"
-    scoreLeft="0"
-    scoreRight="0"
     type="text/javascript"
-    src="embedPlayerLoader.js"> // Path to the actual script
+    src="embedPlayerLoader.js">
 </script>
 ```
 
@@ -54,12 +53,3 @@ Image which will be displayed on the left side of the screen
 
 `rightFlagImage: URL`\
 Image which will be displayed on the right side of the screen
-
-`scoreLeft: number`\
-Score which will be displayed on the left side of the screen
-
-`scoreRight: number`\
-Score which will be displayed on the right side of the screen
-
-
-
