@@ -14,7 +14,7 @@ if (TIVIO_EMBED_CONFIG.forceFallback) {
   TIVIO_EMBED_CONFIG.sources = [TIVIO_EMBED_CONFIG.sources[1]];
 }
 
-function loadPlayer(playerElement) {
+function renderPlayer(playerElement) {
   let currentSourceIndex = 0;
   let retryCount = 0;
 
@@ -95,7 +95,6 @@ function loadPlayer(playerElement) {
 }
 
 function loadEmbedPlayerUrl() {
-
   const players = document.getElementsByClassName('tivio-iihf-player')
 
   for (const playerElement of players) {
