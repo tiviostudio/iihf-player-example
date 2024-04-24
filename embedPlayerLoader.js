@@ -42,6 +42,7 @@ function renderPlayer(playerElement) {
   iframe.width = "100%";
   iframe.style.aspectRatio = "16/9";
   iframe.style.overflow = "hidden";
+  iframe.style.border = "none";
   iframe.allow = "fullscreen";
 
   let timeoutId;
