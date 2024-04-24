@@ -38,6 +38,12 @@ function renderPlayer(playerElement) {
       .join("&");
 
   const iframe = document.createElement("iframe");
+  iframe.title = "Tivio IIHF Player iframe";
+  iframe.width = "100%";
+  iframe.style.aspectRatio = "16/9";
+  iframe.style.overflow = "hidden";
+  iframe.allow = "fullscreen";
+
   let timeoutId;
   function embedIframe() {
     if (timeoutId) {
@@ -60,13 +66,13 @@ function renderPlayer(playerElement) {
 
     iframe.onload = function () {
       console.info("Iframe loaded successfully");
-      
+
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
 
       timeoutId = setTimeout(function () {
-        console.error("Failed to receive confirmation message from player")
+        console.error("Failed to receive confirmation message from player");
         retry();
       }, TIVIO_EMBED_CONFIG.timeoutSeconds * 1000);
     };
@@ -80,13 +86,18 @@ function renderPlayer(playerElement) {
 
   function retry() {
     console.info("Retrying to load player");
-    currentSourceIndex = (currentSourceIndex + 1) % TIVIO_EMBED_CONFIG.sources.length;
+    currentSourceIndex =
+      (currentSourceIndex + 1) % TIVIO_EMBED_CONFIG.sources.length;
     retryCount++;
     embedIframe();
   }
 
   window.addEventListener("message", function (event) {
-    if (typeof event.data === "object" && event.data.type === "ready" && event.data.channelName === params.channelName) {
+    if (
+      typeof event.data === "object" &&
+      event.data.type === "ready" &&
+      event.data.channelName === params.channelName
+    ) {
       console.info("Received confirmation message from player");
       clearTimeout(timeoutId);
     }
@@ -96,10 +107,10 @@ function renderPlayer(playerElement) {
 }
 
 function loadEmbedPlayerUrl() {
-  const players = document.getElementsByClassName('tivio-iihf-player')
+  const players = document.getElementsByClassName("tivio-iihf-player");
 
   for (const playerElement of players) {
-      renderPlayer(playerElement)
+    renderPlayer(playerElement);
   }
 }
 
