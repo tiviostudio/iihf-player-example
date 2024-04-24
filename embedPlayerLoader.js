@@ -69,12 +69,6 @@ function renderPlayer(playerElement) {
         console.error("Failed to receive confirmation message from player")
         retry();
       }, TIVIO_EMBED_CONFIG.timeoutSeconds * 1000);
-
-      window.addEventListener("message", function (event) {
-        if (event.data === "initialized") {
-          clearTimeout(timeoutId);
-        }
-      });
     };
     iframe.onerror = function () {
       console.error("Failed to load player; switching sources");
@@ -90,6 +84,13 @@ function renderPlayer(playerElement) {
     retryCount++;
     embedIframe();
   }
+
+  window.addEventListener("message", function (event) {
+    if (typeof event.data === "object" && event.data.type === "ready" && event.data.channelName === params.channelName) {
+      console.info("Received confirmation message from player");
+      clearTimeout(timeoutId);
+    }
+  });
 
   embedIframe();
 }
