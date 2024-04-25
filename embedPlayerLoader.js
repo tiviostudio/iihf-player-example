@@ -107,10 +107,55 @@ function renderPlayer(playerElement) {
   embedIframe();
 }
 
-function loadEmbedPlayerUrl() {
+const errorImage = 'https://firebasestorage.googleapis.com/v0/b/tivio-production.appspot.com/o/assets%2FJOJ%2Fcountry-block.jpeg?alt=media'
+function renderPlayerError(playerElement) {
+  const div = document.createElement("div");
+  div.style.width = "100%";
+  div.style.aspectRatio = "16/9";
+  div.style.backgroundImage = `url(${errorImage})`;
+  div.style.backgroundSize = "cover";
+  div.style.backgroundPosition = "center";
+  div.style.display = "flex";
+  div.style.justifyContent = "center";
+  div.style.alignItems = "center";
+  div.style.color = "white";
+  div.style.fontFamily = "Arial, sans-serif";
+  div.style.fontSize = "1.5em";
+  div.innerText = "Živý prenos je dostupný len zo Slovenska";
+  playerElement.appendChild(div);
+}
+
+async function checkIsAvailable() {
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => abortController.abort(), 5000);
+  try {
+    const response = await fetch('https://iihf-embed.tivio.workers.dev/', {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      signal: abortController.signal,
+    })
+
+    const data = await response.json();
+    return data.success;
+  } catch (error) {
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function loadEmbedPlayerUrl() {
+  const isAvailable = await checkIsAvailable();
+
   const players = document.getElementsByClassName("tivio-iihf-player");
 
   for (const playerElement of players) {
+    if (isAvailable === false) {
+      renderPlayerError(playerElement);
+      return;
+    }
     renderPlayer(playerElement);
   }
 }
