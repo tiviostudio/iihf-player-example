@@ -7,16 +7,25 @@ const TIVIO_EMBED_CONFIG = {
   messageTimeoutSeconds: 5,
   // Total number of retries before giving up
   maxRetryCount: 3,
-  sources: ["https://iihf-player.web.app", "https://iihf-player.pages.dev"],
+  sources: ["https://iihf-player.web.app"],
 };
 
 if (TIVIO_EMBED_CONFIG.forceFallback) {
   TIVIO_EMBED_CONFIG.sources = [TIVIO_EMBED_CONFIG.sources[1]];
 }
 
-function renderPlayer(playerElement) {
+function renderPlayer(playerElement, source, videoSourceId) {
   let currentSourceIndex = 0;
   let retryCount = 0;
+
+  if (source) {
+    const sourceIndex = TIVIO_EMBED_CONFIG.sources.indexOf(source);
+    if (sourceIndex !== -1) {
+      currentSourceIndex = sourceIndex;
+    } else {
+      TIVIO_EMBED_CONFIG.sources.unshift(source);
+    }
+  }
 
   const params = {
     channelName: playerElement.getAttribute("channelName"),
@@ -27,6 +36,7 @@ function renderPlayer(playerElement) {
     backgroundImage: playerElement.getAttribute("backgroundImage"),
     leftFlagImage: playerElement.getAttribute("leftFlagImage"),
     rightFlagImage: playerElement.getAttribute("rightFlagImage"),
+    videoSourceId,
   };
 
   const toQueryString = (params) =>
@@ -56,6 +66,7 @@ function renderPlayer(playerElement) {
           TIVIO_EMBED_CONFIG.maxRetryCount +
           " attempts"
       );
+      // TODO Show error message in UI
       return;
     }
 
@@ -125,11 +136,11 @@ function renderPlayerError(playerElement) {
   playerElement.appendChild(div);
 }
 
-async function checkIsAvailable() {
+async function checkIsAvailable(channelName) {
   const abortController = new AbortController();
   const timeoutId = setTimeout(() => abortController.abort(), 5000);
   try {
-    const response = await fetch('https://iihf-embed.tivio.workers.dev/', {
+    const response = await fetch(`https://iihf-embed.tivio.workers.dev/?channelName=${channelName}`, {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
@@ -137,8 +148,12 @@ async function checkIsAvailable() {
       signal: abortController.signal,
     })
 
-    const data = await response.json();
-    return data.success;
+    const { success, source, videoSourceId } = await response.json();
+    return {
+      success,
+      source,
+      videoSourceId,
+    };
   } catch (error) {
     return null;
   } finally {
@@ -147,17 +162,25 @@ async function checkIsAvailable() {
 }
 
 async function loadEmbedPlayerUrl() {
-  const isAvailable = await checkIsAvailable();
-
   const players = document.getElementsByClassName("tivio-iihf-player");
+  const playerElement = players[0];
 
-  for (const playerElement of players) {
-    if (isAvailable === false) {
-      renderPlayerError(playerElement);
-      return;
-    }
-    renderPlayer(playerElement);
+  if (!playerElement) {
+    console.error("No player element found");
+    return;
   }
+
+  const channelName = playerElement.getAttribute("channelName");
+  const isAvailable = await checkIsAvailable(channelName);
+
+  if (isAvailable.success === false) {
+    renderPlayerError(playerElement);
+    return;
+  }
+  if (!isAvailable) {
+    renderPlayerError(playerElement);
+  }
+  renderPlayer(playerElement, isAvailable.source, isAvailable.videoSourceId);
 }
 
 // Trigger the dynamic loading process when the window loads
