@@ -11,7 +11,7 @@ const TIVIO_EMBED_CONFIG = {
 function renderPlayer(playerElement, options) {
   let currentSourceIndex = 0;
   let retryCount = 0;
-  const { source, sourceUrl, playerConfig, success } = options || {}
+  const { source, sourceUrl, playerParams, success } = options || {}
 
   if (source) {
     const sourceIndex = TIVIO_EMBED_CONFIG.sources.indexOf(source);
@@ -23,7 +23,7 @@ function renderPlayer(playerElement, options) {
   }
 
   const params = {
-    ...(playerConfig || {}),
+    ...(playerParams || {}),
     protocol: 'dash',
     sourceUrl,
   };
@@ -120,12 +120,12 @@ async function checkIsAvailable(channelName) {
       signal: abortController.signal,
     })
 
-    const { success, source, sourceUrl, playerConfig } = await response.json();
+    const { success, source, sourceUrl, playerParams } = await response.json();
     return {
       success,
       source,
       sourceUrl,
-      playerConfig,
+      playerParams,
     };
   } catch (error) {
     return null;
