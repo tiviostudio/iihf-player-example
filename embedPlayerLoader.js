@@ -46,7 +46,7 @@ function renderPlayer(playerElement, options) {
   const timeout = { id: null, isSuccess: false }
   function embedIframe() {
     if (timeout.id) {
-      clearTimeout(timeout.id);
+      clearTimeoutProxy(timeout.id, 'embedIframe');
     }
     if (retryCount >= TIVIO_EMBED_CONFIG.maxRetryCount) {
       console.error(
@@ -67,7 +67,7 @@ function renderPlayer(playerElement, options) {
       console.info("Iframe loaded successfully", Date.now());
 
       if (timeout.id) {
-        clearTimeout(timeout.id);
+        clearTimeoutProxy(timeout.id, 'iframe.onload');
       }
 
       if (!success || timeout.isSuccess) {
@@ -96,7 +96,7 @@ function renderPlayer(playerElement, options) {
 
   function retry() {
     if (timeout.id) {
-      clearTimeout(timeout.id);
+      clearTimeoutProxy(timeout.id, 'retry');
     }
 
     if (timeout.isSuccess) {
@@ -119,10 +119,16 @@ function renderPlayer(playerElement, options) {
       console.log({
         timeoutId: timeout.id,
       }, Date.now())
-      loadedIframeSuccessfully = true;
-      clearTimeout(timeout.id);
+      timeout.isSuccess = true;
+      clearTimeoutProxy(timeout.id, 'message');
     }
   });
+
+  function clearTimeoutProxy(id, source) {
+    console.log('Clearing timeout ID ', id, ' from source ', source)
+    clearTimeout(id);
+    console.log('Cleared timeout', id)
+  }
 
   embedIframe();
 }
