@@ -1,8 +1,8 @@
 const TIVIO_EMBED_CONFIG = {
   // Timeout which is acceptable in order to load the iframe
-  timeoutSeconds: 25,
+  timeoutSeconds: 5,
   // Timeout which is acceptable in order to receive a confirmation message from the player
-  messageTimeoutSeconds: 25,
+  messageTimeoutSeconds: 5,
   // Total number of retries before giving up
   maxRetryCount: 6,
   sources: ["https://iihf.embed.tivio.studio"],
@@ -44,6 +44,7 @@ function renderPlayer(playerElement, options) {
   iframe.allow = "fullscreen";
 
   let timeoutId;
+  let loadedIframeSuccessfully = false;
   function embedIframe() {
     if (timeoutId) {
       clearTimeout(timeoutId);
@@ -64,23 +65,29 @@ function renderPlayer(playerElement, options) {
     timeoutId = setTimeout(retry, TIVIO_EMBED_CONFIG.timeoutSeconds * 1000);
 
     iframe.onload = function () {
-      console.info("Iframe loaded successfully");
+      console.info("Iframe loaded successfully", Date.now());
 
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
 
-      if (!success) {
+      if (!success || loadedIframeSuccessfully) {
         return
       }
 
+      console.log({
+        success,
+        source,
+        sourceUrl,
+      })
       timeoutId = setTimeout(function () {
-        console.error("Failed to receive confirmation message from player");
+        console.error("Failed to receive confirmation message from player", Date.now());
         retry();
       }, TIVIO_EMBED_CONFIG.timeoutSeconds * 1000);
+      console.log('Set timeout to receive confirmation message from player', timeoutId)
     };
     iframe.onerror = function () {
-      console.error("Failed to load player; switching sources");
+      console.error("Failed to load player; switching sources", Date.now());
       retry();
     };
 
@@ -90,6 +97,10 @@ function renderPlayer(playerElement, options) {
   function retry() {
     if (timeoutId) {
       clearTimeout(timeoutId);
+    }
+
+    if (loadedIframeSuccessfully) {
+      return;
     }
 
     console.info("Retrying to load player");
@@ -104,7 +115,11 @@ function renderPlayer(playerElement, options) {
       typeof event.data === "object" &&
       event.data.type === "ready"
     ) {
-      console.info("Received confirmation message from player");
+      console.info("Received confirmation message from player", Date.now());
+      console.log({
+        timeoutId,
+      }, Date.now())
+      loadedIframeSuccessfully = true;
       clearTimeout(timeoutId);
     }
   });
