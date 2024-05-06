@@ -24,6 +24,7 @@ function renderPlayer(playerElement, options) {
 
   const params = {
     ...(playerParams || {}),
+    channelName: playerElement.getAttribute("channelName"),
     protocol: 'dash',
     sourceUrl,
   };
