@@ -43,11 +43,18 @@ function renderPlayer(playerElement, options) {
   iframe.style.border = "none";
   iframe.allow = "fullscreen";
 
-  const timeout = { id: null, isSuccess: false }
+  const timeout = { iframeTimeoutId: null, messageTimeoutId: null, isSuccess: false }
   function embedIframe() {
-    if (timeout.id) {
-      clearTimeoutProxy(timeout.id, 'embedIframe');
+    if (timeout.isSuccess) {
+      return;
     }
+    if (timeout.iframeTimeoutId) {
+      clearTimeoutProxy(timeout.iframeTimeoutId, 'embedIframe');
+    }
+    if (timeout.messageTimeoutId) {
+      clearTimeoutProxy(timeout.messageTimeoutId, 'embedIframe');
+    }
+
     if (retryCount >= TIVIO_EMBED_CONFIG.maxRetryCount) {
       console.error(
         "Failed to load player after " +
@@ -61,13 +68,13 @@ function renderPlayer(playerElement, options) {
     const source = TIVIO_EMBED_CONFIG.sources[currentSourceIndex];
     iframe.src = `${source}?${toQueryString(params)}`;
 
-    timeout.id = setTimeout(retry, TIVIO_EMBED_CONFIG.timeoutSeconds * 1000);
+    timeout.iframeTimeoutId = setTimeout(retry, TIVIO_EMBED_CONFIG.timeoutSeconds * 1000);
 
     iframe.onload = function () {
       console.info("Iframe loaded successfully", Date.now());
 
-      if (timeout.id) {
-        clearTimeoutProxy(timeout.id, 'iframe.onload');
+      if (timeout.iframeTimeoutId) {
+        clearTimeoutProxy(timeout.iframeTimeoutId, 'iframe.onload');
       }
 
       if (!success || timeout.isSuccess) {
@@ -80,11 +87,11 @@ function renderPlayer(playerElement, options) {
         sourceUrl,
         timeout,
       })
-      timeout.id = setTimeout(function () {
+      timeout.messageTimeoutId = setTimeout(function () {
         console.error("Failed to receive confirmation message from player", Date.now());
         retry();
       }, TIVIO_EMBED_CONFIG.timeoutSeconds * 1000);
-      console.log('Set timeout to receive confirmation message from player. Timeout ID: ', timeout.id)
+      console.log('Set timeout to receive confirmation message from player. Message Timeout ID: ', timeout.messageTimeoutId)
     };
     iframe.onerror = function () {
       console.error("Failed to load player; switching sources", Date.now());
@@ -95,10 +102,6 @@ function renderPlayer(playerElement, options) {
   }
 
   function retry() {
-    if (timeout.id) {
-      clearTimeoutProxy(timeout.id, 'retry');
-    }
-
     if (timeout.isSuccess) {
       return;
     }
@@ -117,10 +120,11 @@ function renderPlayer(playerElement, options) {
     ) {
       console.info("Received confirmation message from player", Date.now());
       console.log({
-        timeoutId: timeout.id,
+        timeout,
       }, Date.now())
       timeout.isSuccess = true;
-      clearTimeoutProxy(timeout.id, 'message');
+      clearTimeoutProxy(timeout.iframeTimeoutId, 'message');
+      clearTimeoutProxy(timeout.messageTimeoutId, 'message');
     }
   });
 
