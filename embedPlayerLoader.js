@@ -1,8 +1,8 @@
 const TIVIO_EMBED_CONFIG = {
   // Timeout which is acceptable in order to load the iframe
-  timeoutSeconds: 5,
+  timeoutSeconds: 25,
   // Timeout which is acceptable in order to receive a confirmation message from the player
-  messageTimeoutSeconds: 5,
+  messageTimeoutSeconds: 25,
   // Total number of retries before giving up
   maxRetryCount: 6,
   sources: ["https://iihf.embed.tivio.studio"],
@@ -37,7 +37,6 @@ function renderPlayer(playerElement, options) {
       .join("&");
 
   const iframe = document.createElement("iframe");
-  iframe.title = "Tivio IIHF Player iframe";
   iframe.width = "100%";
   iframe.style.aspectRatio = "16/9";
   iframe.style.overflow = "hidden";
@@ -59,6 +58,7 @@ function renderPlayer(playerElement, options) {
       return;
     }
 
+    const source = TIVIO_EMBED_CONFIG.sources[currentSourceIndex];
     iframe.src = `${source}?${toQueryString(params)}`;
 
     timeoutId = setTimeout(retry, TIVIO_EMBED_CONFIG.timeoutSeconds * 1000);
@@ -88,6 +88,10 @@ function renderPlayer(playerElement, options) {
   }
 
   function retry() {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+
     console.info("Retrying to load player");
     currentSourceIndex =
       (currentSourceIndex + 1) % TIVIO_EMBED_CONFIG.sources.length;
@@ -110,7 +114,7 @@ function renderPlayer(playerElement, options) {
 
 async function checkIsAvailable(channelName) {
   const abortController = new AbortController();
-  const timeoutId = setTimeout(() => abortController.abort(), 5000);
+  const timeoutId = setTimeout(() => abortController.abort(), 10000);
   try {
     const response = await fetch(`https://iihf-embed.tivio.workers.dev/?channelName=${channelName}`, {
       headers: {
