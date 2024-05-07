@@ -24,9 +24,9 @@ function renderPlayer(playerElement, options) {
 
   const params = {
     ...(playerParams || {}),
+    ...(sourceUrl ? { sourceUrl } : {}),
     channelName: playerElement.getAttribute("channelName"),
     protocol: 'dash',
-    sourceUrl,
   };
 
   const toQueryString = (params) =>
@@ -130,9 +130,7 @@ function renderPlayer(playerElement, options) {
   });
 
   function clearTimeoutProxy(id, source) {
-    console.log('Clearing timeout ID ', id, ' from source ', source)
     clearTimeout(id);
-    console.log('Cleared timeout', id)
   }
 
   embedIframe();
@@ -142,13 +140,18 @@ async function checkIsAvailable(channelName) {
   const abortController = new AbortController();
   const timeoutId = setTimeout(() => abortController.abort(), 10000);
   try {
-    const response = await fetch(`https://iihf-embed.tivio.workers.dev/?channelName=${channelName}`, {
+    const response = await fetch(`https://iihf.worker.tivio.studio/?channelName=${channelName}`, {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
       },
       signal: abortController.signal,
     })
+
+    if (!response.ok) {
+      console.log('Failed to fetch response from worker', response.status, response.statusText)
+      return null;
+    }
 
     const { success, source, sourceUrl, playerParams } = await response.json();
     return {
