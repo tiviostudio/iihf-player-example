@@ -5,13 +5,14 @@ const TIVIO_EMBED_CONFIG = {
   messageTimeoutSeconds: 10,
   // Total number of retries before giving up
   maxRetryCount: 6,
-  sources: ["https://iihf.embed.tivio.studio"],
+  sources: ["https://iihf-player.web.app", "https://iihf.embed.tivio.studio"],
+  version: "1.0.0",
 };
 
 function renderPlayer(playerElement, options) {
   let currentSourceIndex = 0;
   let retryCount = 0;
-  const { source, sourceUrl, playerParams, success } = options || {}
+  const { source, sourceUrl, playerParams, success } = options || {};
 
   if (source) {
     const sourceIndex = TIVIO_EMBED_CONFIG.sources.indexOf(source);
@@ -26,7 +27,7 @@ function renderPlayer(playerElement, options) {
     ...(playerParams || {}),
     ...(sourceUrl ? { sourceUrl } : {}),
     channelName: playerElement.getAttribute("channelName"),
-    protocol: 'dash',
+    protocol: "dash",
   };
 
   const toQueryString = (params) =>
@@ -44,16 +45,52 @@ function renderPlayer(playerElement, options) {
   iframe.style.border = "none";
   iframe.allow = "fullscreen";
 
-  const timeout = { iframeTimeoutId: null, messageTimeoutId: null, isSuccess: false }
+  const timeout = {
+    iframeTimeoutId: null,
+    messageTimeoutId: null,
+    isSuccess: false,
+  };
+
+  iframe.onload = function () {
+    console.info("Iframe loaded successfully", Date.now());
+
+    if (timeout.iframeTimeoutId) {
+      clearTimeoutProxy(timeout.iframeTimeoutId, "iframe.onload");
+    }
+
+    if ((!success && options) || timeout.isSuccess) {
+      return;
+    }
+
+    console.log("Expecting confirmation message from player", Date.now());
+    timeout.messageTimeoutId = setTimeout(function () {
+      console.error(
+        `(v${TIVIO_EMBED_CONFIG.version}) Failed to receive confirmation message from player`,
+        Date.now()
+      );
+      retry();
+    }, TIVIO_EMBED_CONFIG.timeoutSeconds * 1000);
+    console.log(
+      "Set timeout to receive confirmation message from player. Message Timeout ID: ",
+      timeout.messageTimeoutId
+    );
+  };
+  iframe.onerror = function () {
+    console.error(`(v${TIVIO_EMBED_CONFIG.version}) Failed to load player; switching sources`, Date.now());
+    retry();
+  };
+
+  playerElement.appendChild(iframe);
+
   function embedIframe() {
     if (timeout.isSuccess) {
       return;
     }
     if (timeout.iframeTimeoutId) {
-      clearTimeoutProxy(timeout.iframeTimeoutId, 'embedIframe');
+      clearTimeoutProxy(timeout.iframeTimeoutId, "embedIframe");
     }
     if (timeout.messageTimeoutId) {
-      clearTimeoutProxy(timeout.messageTimeoutId, 'embedIframe');
+      clearTimeoutProxy(timeout.messageTimeoutId, "embedIframe");
     }
 
     if (retryCount >= TIVIO_EMBED_CONFIG.maxRetryCount) {
@@ -69,37 +106,10 @@ function renderPlayer(playerElement, options) {
     const source = TIVIO_EMBED_CONFIG.sources[currentSourceIndex];
     iframe.src = `${source}?${toQueryString(params)}`;
 
-    timeout.iframeTimeoutId = setTimeout(retry, TIVIO_EMBED_CONFIG.timeoutSeconds * 1000);
-
-    iframe.onload = function () {
-      console.info("Iframe loaded successfully", Date.now());
-
-      if (timeout.iframeTimeoutId) {
-        clearTimeoutProxy(timeout.iframeTimeoutId, 'iframe.onload');
-      }
-
-      if (!success || timeout.isSuccess) {
-        return
-      }
-
-      console.log({
-        success,
-        source,
-        sourceUrl,
-        timeout,
-      })
-      timeout.messageTimeoutId = setTimeout(function () {
-        console.error("Failed to receive confirmation message from player", Date.now());
-        retry();
-      }, TIVIO_EMBED_CONFIG.timeoutSeconds * 1000);
-      console.log('Set timeout to receive confirmation message from player. Message Timeout ID: ', timeout.messageTimeoutId)
-    };
-    iframe.onerror = function () {
-      console.error("Failed to load player; switching sources", Date.now());
-      retry();
-    };
-
-    playerElement.appendChild(iframe);
+    timeout.iframeTimeoutId = setTimeout(
+      retry,
+      TIVIO_EMBED_CONFIG.timeoutSeconds * 1000
+    );
   }
 
   function retry() {
@@ -115,17 +125,17 @@ function renderPlayer(playerElement, options) {
   }
 
   window.addEventListener("message", function (event) {
-    if (
-      typeof event.data === "object" &&
-      event.data.type === "ready"
-    ) {
+    if (typeof event.data === "object" && event.data.type === "ready") {
       console.info("Received confirmation message from player", Date.now());
-      console.log({
-        timeout,
-      }, Date.now())
+      console.log(
+        {
+          timeout,
+        },
+        Date.now()
+      );
       timeout.isSuccess = true;
-      clearTimeoutProxy(timeout.iframeTimeoutId, 'message');
-      clearTimeoutProxy(timeout.messageTimeoutId, 'message');
+      clearTimeoutProxy(timeout.iframeTimeoutId, "message");
+      clearTimeoutProxy(timeout.messageTimeoutId, "message");
     }
   });
 
@@ -140,16 +150,23 @@ async function checkIsAvailable(channelName) {
   const abortController = new AbortController();
   const timeoutId = setTimeout(() => abortController.abort(), 10000);
   try {
-    const response = await fetch(`https://iihf.worker.tivio.studio/?channelName=${channelName}`, {
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      signal: abortController.signal,
-    })
+    const response = await fetch(
+      `https://iihf.worker.tivio.studio/?channelName=${channelName}`,
+      {
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        signal: abortController.signal,
+      }
+    );
 
     if (!response.ok) {
-      console.log('Failed to fetch response from worker', response.status, response.statusText)
+      console.log(
+        "Failed to fetch response from worker",
+        response.status,
+        response.statusText
+      );
       return null;
     }
 
@@ -168,6 +185,8 @@ async function checkIsAvailable(channelName) {
 }
 
 async function loadEmbedPlayerUrl() {
+  console.log(`IIHF Embed Player Loader v${TIVIO_EMBED_CONFIG.version}`)
+
   const players = document.getElementsByClassName("tivio-iihf-player");
   const playerElement = players[0];
 
@@ -182,7 +201,7 @@ async function loadEmbedPlayerUrl() {
   if (isAvailable) {
     renderPlayer(playerElement, isAvailable);
   } else {
-    renderPlayer(playerElement)
+    renderPlayer(playerElement);
   }
 }
 
