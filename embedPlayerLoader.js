@@ -1,26 +1,36 @@
 const TIVIO_EMBED_CONFIG = {
   // Timeout which is acceptable in order to load the iframe
-  timeoutSeconds: 10,
+  timeoutSeconds: 6,
   // Timeout which is acceptable in order to receive a confirmation message from the player
-  messageTimeoutSeconds: 10,
+  messageTimeoutSeconds: 3,
+  loadingMessageSeconds: 3,
   // Total number of retries before giving up
   maxRetryCount: 6,
   sources: ["https://iihf-player.web.app", "https://iihf.embed.tivio.studio"],
-  version: "1.0.0",
+  version: "1.0.1",
 };
 
-function renderPlayer(playerElement, options) {
+function renderPlayer(playerElement, options, loadingElement) {
   let currentSourceIndex = 0;
   let retryCount = 0;
   const { source, sourceUrl, playerParams, success } = options || {};
 
-  if (source) {
+  if (
+    source &&
+    typeof source === "string" &&
+    source !== "" &&
+    source !== "undefined"
+  ) {
     const sourceIndex = TIVIO_EMBED_CONFIG.sources.indexOf(source);
-    if (sourceIndex !== -1) {
+    if (sourceIndex !== -1 && currentSourceIndex !== undefined) {
       currentSourceIndex = sourceIndex;
     } else {
       TIVIO_EMBED_CONFIG.sources.unshift(source);
     }
+  }
+
+  if (!TIVIO_EMBED_CONFIG.sources[currentSourceIndex]) {
+    currentSourceIndex = 0;
   }
 
   const params = {
@@ -48,14 +58,26 @@ function renderPlayer(playerElement, options) {
   const timeout = {
     iframeTimeoutId: null,
     messageTimeoutId: null,
+    loadingMessageTimeoutId: null,
     isSuccess: false,
   };
+
+  function showLoadingMessage() {
+    if (!timeout.isSuccess && loadingElement && playerElement.contains(loadingElement)) {
+      loadingElement.innerHTML = "Načítavanie...";
+    }
+  }
+
+  timeout.loadingMessageTimeoutId = setTimeout(
+    showLoadingMessage,
+    TIVIO_EMBED_CONFIG.loadingMessageSeconds * 1000
+  );
 
   iframe.onload = function () {
     console.info("Iframe loaded successfully", Date.now());
 
     if (timeout.iframeTimeoutId) {
-      clearTimeoutProxy(timeout.iframeTimeoutId, "iframe.onload");
+      clearTimeoutProxy(timeout.iframeTimeoutId);
     }
 
     if ((!success && options) || timeout.isSuccess) {
@@ -76,7 +98,10 @@ function renderPlayer(playerElement, options) {
     );
   };
   iframe.onerror = function () {
-    console.error(`(v${TIVIO_EMBED_CONFIG.version}) Failed to load player; switching sources`, Date.now());
+    console.error(
+      `(v${TIVIO_EMBED_CONFIG.version}) Failed to load player; switching sources`,
+      Date.now()
+    );
     retry();
   };
 
@@ -86,11 +111,14 @@ function renderPlayer(playerElement, options) {
     if (timeout.isSuccess) {
       return;
     }
+    if (timeout.loadingMessageTimeoutId) {
+      clearTimeoutProxy(timeout.loadingMessageTimeoutId);
+    }
     if (timeout.iframeTimeoutId) {
-      clearTimeoutProxy(timeout.iframeTimeoutId, "embedIframe");
+      clearTimeoutProxy(timeout.iframeTimeoutId);
     }
     if (timeout.messageTimeoutId) {
-      clearTimeoutProxy(timeout.messageTimeoutId, "embedIframe");
+      clearTimeoutProxy(timeout.messageTimeoutId);
     }
 
     if (retryCount >= TIVIO_EMBED_CONFIG.maxRetryCount) {
@@ -103,8 +131,19 @@ function renderPlayer(playerElement, options) {
       return;
     }
 
-    const source = TIVIO_EMBED_CONFIG.sources[currentSourceIndex];
-    iframe.src = `${source}?${toQueryString(params)}`;
+    let iframeSource = TIVIO_EMBED_CONFIG.sources[currentSourceIndex];
+
+    if (
+      !iframeSource ||
+      typeof iframeSource !== "string" ||
+      iframeSource === "" ||
+      iframeSource === "undefined"
+    ) {
+      currentSourceIndex = 0;
+      iframeSource = TIVIO_EMBED_CONFIG.sources[currentSourceIndex];
+    }
+
+    iframe.src = `${iframeSource}?${toQueryString(params)}`;
 
     timeout.iframeTimeoutId = setTimeout(
       retry,
@@ -118,6 +157,7 @@ function renderPlayer(playerElement, options) {
     }
 
     console.info("Retrying to load player");
+    loadingElement.innerHTML = "Načítavanie...";
     currentSourceIndex =
       (currentSourceIndex + 1) % TIVIO_EMBED_CONFIG.sources.length;
     retryCount++;
@@ -133,13 +173,17 @@ function renderPlayer(playerElement, options) {
         },
         Date.now()
       );
+      loadingElement.style.display = "none";
+      loadingElement.parentNode.removeChild(loadingElement);
+
       timeout.isSuccess = true;
-      clearTimeoutProxy(timeout.iframeTimeoutId, "message");
-      clearTimeoutProxy(timeout.messageTimeoutId, "message");
+      clearTimeoutProxy(timeout.iframeTimeoutId);
+      clearTimeoutProxy(timeout.messageTimeoutId);
+      clearTimeoutProxy(timeout.loadingMessageTimeoutId);
     }
   });
 
-  function clearTimeoutProxy(id, source) {
+  function clearTimeoutProxy(id) {
     clearTimeout(id);
   }
 
@@ -185,7 +229,7 @@ async function checkIsAvailable(channelName) {
 }
 
 async function loadEmbedPlayerUrl() {
-  console.log(`IIHF Embed Player Loader v${TIVIO_EMBED_CONFIG.version}`)
+  console.log(`IIHF Embed Player Loader v${TIVIO_EMBED_CONFIG.version}`);
 
   const players = document.getElementsByClassName("tivio-iihf-player");
   const playerElement = players[0];
@@ -195,13 +239,30 @@ async function loadEmbedPlayerUrl() {
     return;
   }
 
+  playerElement.style.position = "relative";
+
+  const loadingElement = document.createElement("div");
+  loadingElement.className = "tivio-iihf-loading";
+  loadingElement.style.position = "absolute";
+  loadingElement.style.top = "0px";
+  loadingElement.style.left = "0px";
+  loadingElement.style.width = "100%";
+  loadingElement.style.height = "100%";
+  loadingElement.style.backgroundColor = "black";
+  loadingElement.style.display = "flex";
+  loadingElement.style.justifyContent = "center";
+  loadingElement.style.alignItems = "center";
+  loadingElement.style.color = "white";
+
+  playerElement.appendChild(loadingElement);
+
   const channelName = playerElement.getAttribute("channelName");
   const isAvailable = await checkIsAvailable(channelName);
 
   if (isAvailable) {
-    renderPlayer(playerElement, isAvailable);
+    renderPlayer(playerElement, isAvailable, loadingElement);
   } else {
-    renderPlayer(playerElement);
+    renderPlayer(playerElement, null, loadingElement);
   }
 }
 
