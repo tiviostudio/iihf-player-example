@@ -68,6 +68,14 @@ function renderPlayer(playerElement, options, loadingElement) {
     }
   }
 
+  function hideLoadingMessage() {
+    if (loadingElement && playerElement.contains(loadingElement)) {
+      loadingElement.style.display = "none";
+      loadingElement.parentNode.removeChild(loadingElement);
+    }
+    clearTimeoutProxy(timeout.loadingMessageTimeoutId);
+  }
+
   timeout.loadingMessageTimeoutId = setTimeout(
     showLoadingMessage,
     TIVIO_EMBED_CONFIG.loadingMessageSeconds * 1000
@@ -81,6 +89,7 @@ function renderPlayer(playerElement, options, loadingElement) {
     }
 
     if ((!success && options) || timeout.isSuccess) {
+      hideLoadingMessage();
       return;
     }
 
@@ -173,13 +182,11 @@ function renderPlayer(playerElement, options, loadingElement) {
         },
         Date.now()
       );
-      loadingElement.style.display = "none";
-      loadingElement.parentNode.removeChild(loadingElement);
 
       timeout.isSuccess = true;
       clearTimeoutProxy(timeout.iframeTimeoutId);
       clearTimeoutProxy(timeout.messageTimeoutId);
-      clearTimeoutProxy(timeout.loadingMessageTimeoutId);
+      hideLoadingMessage();
     }
   });
 
