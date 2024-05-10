@@ -1,13 +1,13 @@
 const TIVIO_EMBED_CONFIG = {
   // Timeout which is acceptable in order to load the iframe
-  timeoutSeconds: 6,
+  timeoutSeconds: 9,
   // Timeout which is acceptable in order to receive a confirmation message from the player
   messageTimeoutSeconds: 3,
   loadingMessageSeconds: 3,
   // Total number of retries before giving up
   maxRetryCount: 6,
   sources: ["https://iihf-player.web.app", "https://iihf.embed.tivio.studio"],
-  version: "1.0.1",
+  version: "1.0.2",
 };
 
 function renderPlayer(playerElement, options, loadingElement) {
